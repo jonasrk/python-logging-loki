@@ -54,9 +54,7 @@ class LokiEmitter(abc.ABC):
         payload = self.build_payload(record, line)
         resp = self.session.post(self.url, json=payload)
         if resp.status_code != self.success_response_code:
-            raise ValueError(
-                "Unexpected Loki API response status code: {0}".format(resp.status_code)
-            )
+            raise ValueError("Unexpected Loki API response status code: {0}".format(resp.status_code))
 
     @abc.abstractmethod
     def build_payload(self, record: logging.LogRecord, line) -> dict:
@@ -94,9 +92,6 @@ class LokiEmitter(abc.ABC):
         tags = copy.deepcopy(tags)
         tags[self.level_tag] = record.levelname.lower()
         tags[self.logger_tag] = record.name
-
-        for record_attr in record.__dict__:
-            tags[record_attr] = record.__dict__[record_attr]
 
         extra_tags = getattr(record, "tags", {})
         if not isinstance(extra_tags, dict):
