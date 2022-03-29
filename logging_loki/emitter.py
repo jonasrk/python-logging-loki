@@ -54,7 +54,9 @@ class LokiEmitter(abc.ABC):
         payload = self.build_payload(record, line)
         resp = self.session.post(self.url, json=payload)
         if resp.status_code != self.success_response_code:
-            raise ValueError("Unexpected Loki API response status code: {0}".format(resp.status_code))
+            raise ValueError(
+                "Unexpected Loki API response status code: {0}".format(resp.status_code)
+            )
 
     @abc.abstractmethod
     def build_payload(self, record: logging.LogRecord, line) -> dict:
@@ -93,6 +95,9 @@ class LokiEmitter(abc.ABC):
         tags[self.level_tag] = record.levelname.lower()
         tags[self.logger_tag] = record.name
 
+        # for record_attr in record.__dict__:
+        #     tags[record_attr] = record.__dict__[record_attr]
+
         extra_tags = getattr(record, "tags", {})
         if not isinstance(extra_tags, dict):
             return tags
@@ -102,7 +107,7 @@ class LokiEmitter(abc.ABC):
             if cleared_name:
                 tags[cleared_name] = tag_value
 
-        return tags
+        return tags, record
 
 
 class LokiEmitterV0(LokiEmitter):
@@ -133,11 +138,13 @@ class LokiEmitterV1(LokiEmitter):
 
     def build_payload(self, record: logging.LogRecord, line) -> dict:
         """Build JSON payload with a log entry."""
-        labels = self.build_tags(record)
+        labels, record = self.build_tags(record)
         ns = 1e9
         ts = str(int(time.time() * ns))
+        from json import JSONEncoder
+
         stream = {
             "stream": labels,
-            "values": [[ts, line]],
+            "values": [[ts, JSONEncoder().encode(record.__dict__)]],
         }
         return {"streams": [stream]}
